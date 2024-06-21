@@ -20,8 +20,7 @@ impl <Data> From<DataLoadResult<Data>> for CachedResponse<Data> {
         CachedResponse {
             must_revalidate: value.must_revalidate,
             valid_until: SystemTime::now() + value.max_age,
-            data: Arc::new(value.data),
-            _phantom_pinned: PhantomPinned,
+            data: Arc::new(value.data)
         }
     }
 }
@@ -51,9 +50,9 @@ impl Error for DataProviderError {
 }
 
 impl From<Box<dyn Error>> for DataProviderError{
-    fn from(value: Option<Box<dyn Error>>) -> Self {
+    fn from(value: Box<(dyn Error + 'static)>) -> Self {
         DataProviderError{
-            source: value
+            source: Some(value)
         }
     }
 }
@@ -67,6 +66,7 @@ impl <Data, Provider: DataProvider<Data>> RemoteConfig<Data, Provider> {
         }
     }
 
+    /*
     pub async fn load_with_time(&self, time: SystemTime) -> Result<Arc<Data>, DataProviderError> {
         // Just use arc swap. I'm really tired of synchronizing this shit
 
@@ -76,4 +76,5 @@ impl <Data, Provider: DataProvider<Data>> RemoteConfig<Data, Provider> {
         let ptr = self.cached_response.load(Relaxed);
 
     }
+    */
 }

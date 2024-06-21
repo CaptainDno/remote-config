@@ -1,5 +1,7 @@
-mod config;
-mod data_providers;
+//! Test crate documentation
+
+pub mod config;
+pub mod data_providers;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right

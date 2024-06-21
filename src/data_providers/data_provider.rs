@@ -12,5 +12,5 @@ pub struct DataLoadResult<T> {
 /// Remote data provider trait.
 /// Data provider is responsible for loading data rom external source and converting it to desired type.
 pub trait DataProvider<Data> {
-    async fn load_data<Data>(&self) -> Result<DataLoadResult<Data>, Box<dyn Error>>;
+    async fn load_data(&self) -> Result<DataLoadResult<Data>, Box<dyn Error>>;
 }
