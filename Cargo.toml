@@ -1,0 +1,29 @@
+[package]
+name = "remote_config"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = "0.1.40"
+arc-swap = "1.7.1"
+
+tokio = {version = "1.38.0", features = ["sync"]}
+
+# http
+reqwest = {version = "0.12.5", optional = true}
+cache_control = {version = "0.2.0", optional = true}
+
+# Deserialization
+serde = {version = "1.0.203", optional = true}
+serde_json = {version = "1.0.117", optional = true}
+toml = {version = "0.8.14", optional = true}
+serde_yaml = {version = "0.9.34+deprecated", optional = true}
+
+[features]
+http = ["dep:reqwest", "dep:cache_control"]
+serde = ["http", "dep:serde"]
+json = ["serde", "dep:serde_json"]
+toml = ["serde", "dep:toml"]
+yaml = ["serde", "dep:serde_yaml"]
