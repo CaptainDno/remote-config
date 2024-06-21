@@ -12,9 +12,7 @@ struct CachedResponse <T> {
     must_revalidate: bool,
     valid_until: SystemTime,
     // Arc ensures that when old cached response is dropped, data is not dropped if it is still in use somewhere
-    data: Arc<T>,
-    // REMEMBER: CACHED RESPONSE MUST NOT MOVE IN ANY CIRCUMSTANCES WHILE IT IS BEING POINTED AT
-    _phantom_pinned: PhantomPinned
+    data: T,
 }
 
 impl <Data> From<DataLoadResult<Data>> for CachedResponse<Data> {
@@ -30,7 +28,7 @@ impl <Data> From<DataLoadResult<Data>> for CachedResponse<Data> {
 
 struct RemoteConfig<Data, Provider: DataProvider<Data>> {
     data_provider: Provider,
-    cached_response: AtomicPtr<CachedResponse<Data>>,
+    cached_response: AtomicPtr<Arc<CachedResponse<Data>>>,
     revalidation_lock: Mutex<()>,
     is_revalidating: AtomicBool,
     ordering: Ordering
@@ -70,43 +68,8 @@ impl <Data, Provider: DataProvider<Data>> RemoteConfig<Data, Provider> {
     }
 
     pub async fn load_with_time(&self, time: SystemTime) -> Result<Arc<Data>, DataProviderError> {
+        // Just use arc swap. I'm really tired of synchronizing this shit
 
-        if self.is_revalidating.load(Ordering::SeqCst) {
-            // During revalidation, 'cached' cannot be accessed safely, so we need to wait
-            let _lock = self.revalidation_lock.lock().await;
-        }
-
-
-        let cached = unsafe {&*self.cached_response.load(self.ordering)}; // Always non null
-        // FIXME THIS IS UNSAFE, because value is not arc
-        if time > cached.valid_until {
-            if cached.must_revalidate {
-                let _lock = self.revalidation_lock.lock().await;
-
-                let cached = unsafe {&*self.cached_response.load(self.ordering)}; // Always non null
-
-                if SystemTime::now() <= cached.valid_until{
-
-                }
-
-                // REMEMBER: CACHED RESPONSE MUST NOT MOVE IN ANY CIRCUMSTANCES WHILE IT IS BEING POINTED AT
-                let resp_boxed = Box::new(self.pull().await?);
-                let arc_to_return = resp_boxed.data.clone();
-
-                unsafe {
-                    // Drop old response and free memory
-                    // REMEMBER: HERE cached BECOMES INVALID
-                    let _ = Box::from_raw(self.cached_response.swap(Box::into_raw(resp_boxed), self.ordering));
-                }
-
-                return Ok(arc_to_return);
-            }
-            else {
-                return cached.data.clone();
-            }
-        }
-
-        return cached.data.clone();
     }
 
     pub fn load (&self) -> Arc<Data> {
