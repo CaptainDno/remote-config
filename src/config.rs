@@ -78,7 +78,7 @@ impl <Data, Provider: DataProvider<Data>> RemoteConfig<Data, Provider> {
 
 
         let cached = unsafe {&*self.cached_response.load(self.ordering)}; // Always non null
-
+        // FIXME THIS IS UNSAFE, because value is not arc
         if time > cached.valid_until {
             if cached.must_revalidate {
                 let _lock = self.revalidation_lock.lock().await;
