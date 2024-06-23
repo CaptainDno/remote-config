@@ -6,11 +6,14 @@ pub struct DataLoadResult<T> {
     pub data: T,
     /// If true, once the data becomes stale, it can't be used until revalidated successfully.
     pub must_revalidate: bool,
-    /// Max data age until it should be revalidated
-    pub max_age: Duration
+    /// Time in the future when `data` becomes stale
+    pub valid_until: SystemTime
 }
 /// Remote data provider trait.
-/// Data provider is responsible for loading data rom external source and converting it to desired type.
+/// Data provider loads data from external sources and returns [`DataLoadResult`]
+/// # Errors
+/// Any error can be returned by custom implementation.
 pub trait DataProvider<Data> {
+    /// Try to load data
     async fn load_data(&self) -> Result<DataLoadResult<Data>, Box<dyn Error>>;
 }

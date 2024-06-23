@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tracing = "0.1.40"
+tracing = {version = "0.1.40", optional = true}
 arc-swap = "1.7.1"
 
 tokio = {version = "1.38.0", features = ["sync"]}
@@ -27,3 +27,7 @@ serde = ["http", "dep:serde"]
 json = ["serde", "dep:serde_json"]
 toml = ["serde", "dep:toml"]
 yaml = ["serde", "dep:serde_yaml"]
+
+tracing = ["dep:tracing"]
+
+non_static = []
