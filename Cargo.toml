@@ -9,7 +9,7 @@ edition = "2021"
 tracing = {version = "0.1.40", optional = true}
 arc-swap = "1.7.1"
 
-tokio = {version = "1.38.0", features = ["sync"]}
+tokio = {version = "1.38.0", features = ["sync", "rt"]}
 
 # http
 reqwest = {version = "0.12.5", optional = true}
@@ -19,9 +19,18 @@ cache_control = {version = "0.2.0", optional = true}
 serde = {version = "1.0.203", optional = true}
 serde_json = {version = "1.0.117", optional = true}
 toml = {version = "0.8.14", optional = true}
-serde_yaml = {version = "0.9.34+deprecated", optional = true}
+serde_yaml = {version = "0.9.34", optional = true}
+url = "2.5.2"
+
+[dev-dependencies]
+mockito = {version = "1.4.0"}
+tokio = {version = "1.38.0", features = ["sync", "macros", "rt"]}
+serde = {version = "1.0.203", features = ["derive"]}
+
 
 [features]
+default = ["http", "serde", "json"]
+
 http = ["dep:reqwest", "dep:cache_control"]
 serde = ["http", "dep:serde"]
 json = ["serde", "dep:serde_json"]
@@ -30,4 +39,7 @@ yaml = ["serde", "dep:serde_yaml"]
 
 tracing = ["dep:tracing"]
 
-non_static = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
