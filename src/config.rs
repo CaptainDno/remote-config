@@ -249,6 +249,7 @@ where Self: Send + Sync + Clone
 
 #[cfg(feature = "non_static")]
 impl <Data: Send + Sync + 'static, Provider: DataProvider<Data> + Send + 'static> NonStaticRemoteConfig<Data> for Arc<RemoteConfig<Data, Provider>> {
+    /// See [`RemoteConfig::load_with_time`] docs
     async fn load_with_time(&self, time: SystemTime) -> LoadResult<Data> {
         let curr = self.cached_response.load();
 
@@ -292,10 +293,11 @@ impl <Data: Send + Sync + 'static, Provider: DataProvider<Data> + Send + 'static
                         }
                     }
 
-                    // We clone and move self to uphold 'static lifetime guarantee
+                    // We clone and move self to the async closure to uphold 'static lifetime guarantee
                     let cloned = self.clone();
                     
                     let handle = spawn(async move {
+                        // Guard is still valid because of cloned value
                         return match guard.data_provider.load_data().await {
                             Ok(load_result) => {
                                 cloned.cached_response.store(Arc::new(load_result));
@@ -332,6 +334,7 @@ impl <Data: Send + Sync + 'static, Provider: DataProvider<Data> + Send + 'static
         Ok(CachedData(curr))
     }
 
+    /// See [`RemoteConfig::load_with_time`] docs
     async fn load(&self) -> LoadResult<Data> {
         self.load_with_time(SystemTime::now()).await
     }
