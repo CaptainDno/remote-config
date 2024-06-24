@@ -1,10 +1,11 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use arc_swap::{ArcSwap, Guard};
+use arc_swap::{ArcSwap, AsRaw, Guard};
 use tokio::spawn;
 use tokio::sync::Mutex;
 use crate::data_providers::data_provider::{DataLoadResult, DataProvider};
@@ -57,9 +58,9 @@ struct Revalidator <Data: Send + Sync, Provider: DataProvider<Data> + Send> {
 /// }
 /// ```
 /// # Thread safety
-/// [`DataProvider`] must be [`Send`] (to safely perform revalidation in background task), 
-/// but may not be [`Sync`] (only one thread can perform revalidation to avoid spamming unnecessary request). 
-/// 
+/// [`DataProvider`] must be [`Send`] (to safely perform revalidation in background task),
+/// but may not be [`Sync`] (only one thread can perform revalidation to avoid spamming unnecessary request).
+///
 /// `Data` must be both [`Send`] and [`Sync`]
 #[derive(Debug)]
 pub struct RemoteConfig<Data: Send + Sync, Provider: DataProvider<Data> + Send> {
@@ -148,7 +149,7 @@ impl <Data: Send + Sync, Provider: DataProvider<Data> + Send> RemoteConfig<Data,
     /// If not, but `must_revalidate` is false, cached data is returned, and revalidation is started in background if necessary.
     /// If stale data must be revalidated, this method returns only after revalidation attempt is finished.
     /// ## Why static?
-    /// When data is stale, but `!must_revalidate`, revalidation task is spawned to perform revalidation in background. Lifetime must be `'static` to spawn this task. 
+    /// When data is stale, but `!must_revalidate`, revalidation task is spawned to perform revalidation in background. Lifetime must be `'static` to spawn this task.
     /// Enable feature `non_static` to support usage of [`Arc`] instead of static reference.
     /// # Errors
     /// If stale data must be revalidated and last revalidation attempt failed
@@ -233,6 +234,105 @@ impl <Data: Send + Sync, Provider: DataProvider<Data> + Send> RemoteConfig<Data,
 
     /// See [`RemoteConfig::load_with_time`] docs
     pub async fn load(&'static self) -> LoadResult<Data> {
+        self.load_with_time(SystemTime::now()).await
+    }
+}
+
+#[cfg(feature = "non_static")]
+pub trait NonStaticRemoteConfig <Data: Send + Sync>
+where Self: Send + Sync + Clone
+{
+    fn load_with_time(&self, time: SystemTime) -> impl Future<Output = LoadResult<Data>> + Send;
+    fn load(&self) -> impl Future<Output = LoadResult<Data>> + Send;
+    
+}
+
+#[cfg(feature = "non_static")]
+impl <Data: Send + Sync + 'static, Provider: DataProvider<Data> + Send + 'static> NonStaticRemoteConfig<Data> for Arc<RemoteConfig<Data, Provider>> {
+    async fn load_with_time(&self, time: SystemTime) -> LoadResult<Data> {
+        let curr = self.cached_response.load();
+
+        // Self is cloned and moved into spawned task, so reference validity is guaranteed
+        let self_static: &'static RemoteConfig<Data, Provider> = unsafe{&*self.as_raw()};
+        
+        if curr.valid_until < time {
+            return match self_static.revalidator.try_lock() {
+                // Revalidation is in progress
+                Err(_) => {
+                    if curr.must_revalidate {
+                        // Wait for revalidation to finish
+                        let guard = self_static.revalidator.lock().await;
+
+                        if let Some(ref error) = guard.revalidation_error {
+                            // Revalidation failed
+                            // Error is wrapped in arc for thread safety
+                            Err(error.clone())
+                        } else {
+                            // Revalidation was successful, so we can use data without additional checks
+                            Ok(CachedData(self_static.cached_response.load()))
+                        }
+                    } else {
+                        #[cfg(feature = "tracing")] {
+                            warn!("Stale configuration data is being used for config '{cfg_name}'", cfg_name = self_static.name)
+                        }
+                        Ok(CachedData(curr))
+                    }
+                },
+                // Revalidation should be started
+                Ok(mut guard) => {
+
+                    // Quick return if it is too early to retry after error
+                    if let Some(ref err) = guard.revalidation_error {
+                        if time < err.timestamp + self_static.retry_interval {
+                            return if curr.must_revalidate {
+                                Err(err.clone())
+                            } else {
+                                Ok(CachedData(curr))
+                            }
+                        }
+                    }
+
+                    // We clone and move self to uphold 'static lifetime guarantee
+                    let cloned = self.clone();
+                    
+                    let handle = spawn(async move {
+                        return match guard.data_provider.load_data().await {
+                            Ok(load_result) => {
+                                cloned.cached_response.store(Arc::new(load_result));
+                                guard.revalidation_error = None;
+                                Ok(CachedData(cloned.cached_response.load()))
+                            },
+                            Err(err) => {
+                                #[cfg(feature = "tracing")] {
+                                    if let Some(source) = err.source() {
+                                        error!("Failed to load data for config {cfg_name}. Error: {error}", cfg_name = cloned.name, error = source);
+                                    } else {
+                                        error!("Failed to load data for config {cfg_name}. No source error provided", cfg_name = cloned.name)
+                                    }
+                                }
+                                let dp_err = Arc::new(DataProviderError::from(err));
+                                guard.revalidation_error = Some(dp_err.clone());
+                                Err(dp_err)
+                            }
+                        }
+                    });
+
+                    if curr.must_revalidate {
+                        // Wait for validation attempt to finish
+                        handle.await.unwrap()
+                    } else {
+                        // Return immediately
+                        Ok(CachedData(curr))
+                    }
+                }
+            }
+        }
+
+        // Return valid data
+        Ok(CachedData(curr))
+    }
+
+    async fn load(&self) -> LoadResult<Data> {
         self.load_with_time(SystemTime::now()).await
     }
 }

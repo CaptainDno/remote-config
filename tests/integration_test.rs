@@ -8,7 +8,7 @@ use tokio::time::sleep;
 use remote_config::config::RemoteConfig;
 use remote_config::data_providers::http::HttpDataProvider;
 use remote_config::data_providers::http::serde_extractor::SerdeDataExtractor;
-
+use remote_config::config::NonStaticRemoteConfig;
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 struct MockData {
     test_number: u32
@@ -88,15 +88,88 @@ async fn test_static_with_cache_control(conf: &'static OnceCell<RConfTest>, must
     mock.assert_async().await;
 }
 
+
+async fn test_arc_with_cache_control(must_revalidate: bool, ttl: Duration) {
+    static MOCK_DATA: MockData = MockData{test_number: 999};
+
+    let mut server = mockito::Server::new_async().await;
+    
+    
+
+    let mut cache_control_val = format!("private, max-age={secs}", secs = ttl.as_secs());
+    if must_revalidate {
+        cache_control_val += ", must-revalidate"
+    }
+
+    let mock = server
+        .mock("GET", "/mock")
+        .with_header("Content-Type", "application/json")
+        .with_header("Cache-Control", &cache_control_val)
+        .with_body(serde_json::to_string(&MOCK_DATA).unwrap())
+        .expect(2)
+        .create_async()
+        .await;
+
+    let url = server.url() + "/mock";
+    
+    let conf = Arc::new(init_config(&url).await);
+
+    // Test initial load
+    let mut handles = Vec::with_capacity(10);
+
+    for _ in 0..10{
+        let cloned = conf.clone();
+        handles.push(tokio::spawn(async move {
+            // Expect successful load
+            assert_eq!(cloned.load().await.unwrap().deref(), &MOCK_DATA);
+        }));
+    }
+    for handle in handles {
+        handle.await.unwrap();
+    }
+
+    // Wait for data to expire
+    sleep(ttl).await;
+
+    // Revalidation should succeed
+    let mut handles = Vec::with_capacity(10);
+    for _ in 0..10{
+        let cloned = conf.clone();
+        handles.push(tokio::spawn(async move {
+            // Expect successful load
+            assert_eq!(cloned.load().await.unwrap().deref(), &MOCK_DATA);
+        }));
+    }
+    for handle in handles {
+        handle.await.unwrap();
+    }
+
+    // In case background request is in progress
+    sleep(Duration::from_millis(100)).await;
+
+    // Only two requests expected
+    mock.assert_async().await;
+}
+
 #[tokio::test]
 async fn test_with_must_revalidate() {
     static CONF: OnceCell<RConfTest> = OnceCell::const_new();
     
     test_static_with_cache_control(&CONF, true, Duration::from_secs(1)).await;
+    
+    #[cfg(feature = "non_static")]
+    {
+        test_arc_with_cache_control(true, Duration::from_secs(1)).await;
+    }
 }
 
 #[tokio::test]
 async fn test_without_must_revalidate() {
     static CONF: OnceCell<RConfTest> = OnceCell::const_new();
     test_static_with_cache_control(&CONF, false, Duration::from_secs(1)).await;
+
+    #[cfg(feature = "non_static")]
+    {
+        test_arc_with_cache_control(false, Duration::from_secs(1)).await;
+    }
 }

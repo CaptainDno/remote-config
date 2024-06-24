@@ -20,7 +20,6 @@ serde = {version = "1.0.203", optional = true}
 serde_json = {version = "1.0.117", optional = true}
 toml = {version = "0.8.14", optional = true}
 serde_yaml = {version = "0.9.34", optional = true}
-url = "2.5.2"
 
 [dev-dependencies]
 mockito = {version = "1.4.0"}
@@ -31,14 +30,26 @@ serde = {version = "1.0.203", features = ["derive"]}
 [features]
 default = ["http", "serde", "json"]
 
+# Enable http client
 http = ["dep:reqwest", "dep:cache_control"]
+
+# Enable serde data extractor
 serde = ["http", "dep:serde"]
+
+# Enable JSON deserialization
 json = ["serde", "dep:serde_json"]
+
+# Enable TOML deserialization
 toml = ["serde", "dep:toml"]
+
+# Enable yaml deserialization
 yaml = ["serde", "dep:serde_yaml"]
 
+# Enable tracing
 tracing = ["dep:tracing"]
 
+# Enable non_static implementation for RemoteConfig wrapped in Arc
+non_static = []
 
 [package.metadata.docs.rs]
 all-features = true

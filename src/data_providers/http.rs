@@ -130,8 +130,7 @@ mod tests {
             .with_body(json!({"err": "Not found"}).to_string())
             .create_async()
             .await;
-
-
+        
         server
     }
 
