@@ -1,6 +1,7 @@
 use std::error::Error;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 /// Result of successful data load
+#[derive(Debug)]
 pub struct DataLoadResult<T> {
     /// Data in desired format
     pub data: T,
@@ -13,7 +14,7 @@ pub struct DataLoadResult<T> {
 /// Data provider loads data from external sources and returns [`DataLoadResult`]
 /// # Errors
 /// Any error can be returned by custom implementation.
-pub trait DataProvider<Data> {
+pub trait DataProvider<Data: Send + Sync> {
     /// Try to load data
-    async fn load_data(&self) -> Result<DataLoadResult<Data>, Box<dyn Error>>;
+    fn load_data(&self) -> impl std::future::Future<Output = Result<DataLoadResult<Data>, Box<dyn Error>>> + Send;
 }

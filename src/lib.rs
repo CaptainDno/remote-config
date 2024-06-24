@@ -1,23 +1,8 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 //! Test crate documentation
 
-
+/// Remote Config instance and utility types
 pub mod config;
+/// Data providers for RemoteConfig instance.
+/// Public traits are included to allow easy use of custom implementations.
 pub mod data_providers;
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
