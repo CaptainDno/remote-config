@@ -9,7 +9,7 @@ authors = ["Remote Config developers"]
 categories = ["asynchronous", "config", "caching"]
 keywords = ["async", "config", "cached", "remote"]
 description = """
-Flexible crate for loading configuration from remote source with caching and automatic revalidation.
+Flexible crate for asynchronously loading configuration from remote source with caching and automatic revalidation.
 """
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
