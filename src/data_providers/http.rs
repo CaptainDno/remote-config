@@ -9,7 +9,8 @@ use crate::data_providers::data_provider::{DataLoadResult, DataProvider};
 use crate::data_providers::http::DataExtractionError::HeaderParseError;
 
 /// Generic data extractor, that consumes [`reqwest::Response`]
-pub trait HttpDataExtractor<Data> {
+/// Use this trait to create custom data extractors.
+pub trait HttpDataExtractor<Data: Send + Sync> {
     /// Extract data from HTTP response
     /// # Errors
     /// Any error can be returned by custom implementation.
@@ -30,7 +31,7 @@ pub trait HttpDataExtractor<Data> {
 /// let extractor = SerdeDataExtractor::<HashMap<String, String>>::new();
 /// let data_provider = HttpDataProvider::new(client, Url::parse("https://www.example.com/cfg").unwrap(), extractor);
 /// ```
-pub struct HttpDataProvider<Data, Extractor: HttpDataExtractor<Data>> {
+pub struct HttpDataProvider<Data: Send + Sync, Extractor: HttpDataExtractor<Data>> {
     extractor: Extractor,
     client: reqwest::Client,
     url: Url,
@@ -47,7 +48,7 @@ impl <Data: Send + Sync, Extractor: HttpDataExtractor<Data> + Sync> DataProvider
     }
 }
 
-impl <Data, Extractor: HttpDataExtractor<Data>> HttpDataProvider<Data, Extractor> {
+impl <Data: Send + Sync, Extractor: HttpDataExtractor<Data>> HttpDataProvider<Data, Extractor> {
     /// Construct new [`HttpDataExtractor`] from reqwest client, url and data extractor
     pub fn new(client: reqwest::Client, url: Url, extractor: Extractor) -> Self {
         Self {
@@ -299,7 +300,7 @@ pub mod serde_extractor {
         phantom_data: PhantomData<Data>
     }
 
-    impl <Data: DeserializeOwned + Sync> HttpDataExtractor<Data> for SerdeDataExtractor<Data> {
+    impl <Data: DeserializeOwned + Sync + Send> HttpDataExtractor<Data> for SerdeDataExtractor<Data> {
         /// Extracts data from provided response.
         /// # Errors
         /// Return an error in one the following cases:

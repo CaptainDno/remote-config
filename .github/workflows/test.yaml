@@ -1,0 +1,27 @@
+name: Test
+on:
+  pull_request:
+
+jobs:
+  check-and-test:
+    name: Check and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: swatinem/rust-cache@v2
+      - name: Check
+        run: >
+          cargo check --all-features
+      - name: Test
+        run: >
+          cargo install cargo-tarpaulin
+          && cargo tarpaulin
+          --verbose
+          --out Xml
+          --engine llvm
+          --skip-clean
+          --all-features
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

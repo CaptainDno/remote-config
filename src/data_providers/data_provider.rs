@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::time::SystemTime;
 /// Result of successful data load
+/// # What if I don't need caching?
+/// Just set `valid_until` to some time in the past or current time.
 #[derive(Debug)]
 pub struct DataLoadResult<T> {
     /// Data in desired format

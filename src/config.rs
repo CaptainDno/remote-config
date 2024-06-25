@@ -20,7 +20,7 @@ struct Revalidator <Data: Send + Sync, Provider: DataProvider<Data> + Send> {
     data_type: PhantomData<Data>
 }
 
-/// Remote configuration data.
+/// Remote configuration struct.
 /// Data is pulled from specified data provider automatically.
 /// # Examples
 /// ```

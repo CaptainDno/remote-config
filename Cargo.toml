@@ -2,7 +2,15 @@
 name = "remote_config"
 version = "0.1.0"
 edition = "2021"
-
+repository = "https://github.com/CaptainDno/remote-config"
+readme = "README.md"
+license-file = "LICENCE"
+authors = ["Remote Config developers"]
+categories = ["asynchronous", "config", "caching"]
+keywords = ["async", "config", "cached", "remote"]
+description = """
+Flexible crate for loading configuration from remote source with caching and automatic revalidation.
+"""
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
