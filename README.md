@@ -1,6 +1,6 @@
 # Remote config
 
-![crates.io](https://img.shields.io/crates/v/remote_config)
+[![crates.io](https://img.shields.io/crates/v/remote_config)](https://crates.io/crates/remote_config)
 
 This crate provides easy way to asynchronously pull configuration files from external source
 (e.g. centralized HTTP service).
