@@ -2,6 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/remote_config)](https://crates.io/crates/remote_config)
 [![Test](https://github.com/CaptainDno/remote-config/actions/workflows/test.yaml/badge.svg?branch=master)](https://github.com/CaptainDno/remote-config/actions/workflows/test.yaml)
+[![codecov](https://codecov.io/gh/CaptainDno/remote-config/graph/badge.svg?token=E74XRYO6EX)](https://codecov.io/gh/CaptainDno/remote-config)
 
 This crate provides easy way to asynchronously pull configuration files from external source
 (e.g. centralized HTTP service).
