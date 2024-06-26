@@ -212,6 +212,12 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "xml")]
+    async fn deserialize_xml() {
+        test_content_type!(serde_xml_rs::to_string(&TEST_DATA).unwrap(), "application/xml");
+    }
+
+    #[tokio::test]
     async fn http_error() {
         {
             let data_provider = get_data_provider("https://localhost".to_string());
@@ -294,6 +300,7 @@ pub mod serde_extractor {
     /// | json    | application/json        |
     /// | toml    | application/toml[^note] |
     /// | yaml    | application/yaml        |
+    /// | xml     | application/xml         |
     ///
     /// [^note]: As of 21.06.2024  there is no official MIME type for TOML, so `application/toml` is used
     pub struct SerdeDataExtractor<Data: DeserializeOwned>{
@@ -342,6 +349,14 @@ pub mod serde_extractor {
                         serde_yaml::from_slice::<Data>(&bytes).map_err(|e| ContentParseError("application/yaml".to_owned(), Box::new(e)))?
                     }
                 },
+                "application/xml" => {
+                    #[cfg(not (feature = "xml"))] return Err(Box::new(UnsupportedContentType("application/yaml".to_string(), Some("xml"))));
+
+                    #[cfg(feature = "xml")] {
+                        let txt = response.text().await.map_err(|e| ContentParseError("application/xml".to_string(), Box::new(e)))?;
+                        serde_xml_rs::from_str::<Data>(&txt).map_err(|e| ContentParseError("application/xml".to_string(), Box::new(e)))?
+                    }
+                }
                 other => {
                     return Err(Box::new(UnsupportedContentType(other.to_string(), None)));
                 }

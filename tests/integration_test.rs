@@ -8,7 +8,7 @@ use tokio::time::sleep;
 use remote_config::config::RemoteConfig;
 use remote_config::data_providers::http::HttpDataProvider;
 use remote_config::data_providers::http::serde_extractor::SerdeDataExtractor;
-use remote_config::config::NonStaticRemoteConfig;
+#[cfg(feature = "non_static")] use remote_config::config::NonStaticRemoteConfig;
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 struct MockData {
     test_number: u32
@@ -25,7 +25,12 @@ impl Default for MockData {
 async fn init_config(url : &str) -> RemoteConfig<MockData, HttpDataProvider<MockData, SerdeDataExtractor<MockData>>> {
     let client = reqwest::Client::default();
     let data_provider = HttpDataProvider::new(client, Url::parse(url).unwrap(), SerdeDataExtractor::default());
-    RemoteConfig::new("Test config".to_string(), data_provider, Duration::from_secs(1)).await.unwrap()
+    #[cfg(feature = "tracing")] {
+        RemoteConfig::new("Test config".to_string(), data_provider, Duration::from_secs(1)).await.unwrap()
+    }
+    #[cfg(not (feature = "tracing"))]{
+        RemoteConfig::new(data_provider, Duration::from_secs(1)).await.unwrap()
+    } 
 }
 
 type RConfTest = RemoteConfig<MockData, HttpDataProvider<MockData, SerdeDataExtractor<MockData>>>;
@@ -88,7 +93,7 @@ async fn test_static_with_cache_control(conf: &'static OnceCell<RConfTest>, must
     mock.assert_async().await;
 }
 
-
+#[cfg(feature = "non_static")]
 async fn test_arc_with_cache_control(must_revalidate: bool, ttl: Duration) {
     static MOCK_DATA: MockData = MockData{test_number: 999};
 
