@@ -8,7 +8,7 @@ and revalidate them periodically.
 ## Features
 + Supports both `static` and wrapped in `Arc` configs.
 + Flexible `RemoteConfig` struct that uses any custom data provider and automatically revalidates data when it becomes stale.
-+ Supports loading configuration in JSON, YAML or TOML via HTTP out of the box (Uses `Cache-Control` and `Content-Type` headers).
++ Supports loading configuration in JSON, YAML, XML and TOML via HTTP out of the box (Uses `Cache-Control` and `Content-Type` headers).
 
 ## Documentation and examples
 

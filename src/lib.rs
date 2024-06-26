@@ -11,9 +11,10 @@
 //! All built-in data providers and their features can be enabled or disabled using this feature flags.
 //! + `http` - enables `HttpDataProvider` that uses reqwest client to load data from remote source (enabled by default)
 //!     + `serde` - enables convenient data extractor for http data provider, that automatically parses necessary headers and deserializes data based on content-type (enabled by default)
-//!         + `json` - json deserialization support (enabled by default)
-//!         + `yaml` - yaml deserialization support
-//!         + `toml` - toml deserialization support
+//!         + `json` - json deserialization support (enabled by default). Deserializer: [serde_json](https://crates.io/crates/serde_json)
+//!         + `yaml` - yaml deserialization support. Deserializer: [serde_yaml](https://crates.io/crates/serde_yaml)
+//!         + `toml` - toml deserialization support. Deserializer: [toml](https://crates.io/crates/toml)
+//!         + `xml` - xml deserialization support. Deserializer: [serde-xml-rs](https://crates.io/crates/serde-xml-rs)
 //!
 //! # Examples
 //! ```
