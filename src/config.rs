@@ -1,11 +1,12 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
+#[cfg(feature = "non_static")] use std::future::Future;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use arc_swap::{ArcSwap, AsRaw, Guard};
+#[cfg(feature = "non_static")] use arc_swap::{ArcSwap, AsRaw, Guard};
+#[cfg(not (feature = "non_static"))] use arc_swap::{ArcSwap, Guard};
 use tokio::spawn;
 use tokio::sync::Mutex;
 use crate::data_providers::data_provider::{DataLoadResult, DataProvider};
